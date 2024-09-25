@@ -30,6 +30,10 @@ namespace Korx.Player
         [SerializeField] private float airDrag = 0f;
         [SerializeField] private float airMultiplier = 0.4f;
 
+        [Header("Crouching")]
+        [SerializeField] private float crouchYScale;
+        [SerializeField] private float startYScale;
+
         [Header("Jump Cooldown")]
         [SerializeField] private float jumpCooldown = 0.5f;
 
@@ -39,6 +43,11 @@ namespace Korx.Player
         [SerializeField] private float lookLimit = 90f;
         private float xRotation;
         private float yRotation;
+
+        [Header("Slope Movement")]
+        [SerializeField] private float maxSlopeAngle = 45f;
+        RaycastHit slopeHit;
+        private bool exitingSlope;
 
         [Header("External Components")]
         [SerializeField] private Rigidbody rb;
@@ -73,18 +82,24 @@ namespace Korx.Player
         // Methods
         private void Awake()
         {
+            rb = GetComponent<Rigidbody>();
+            capsuleCollider = GetComponent<CapsuleCollider>();
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
             canJump = true;
+            startYScale = transform.localScale.y;
         }
+
         private void HandleJump()
         {
+            exitingSlope = true;
+
             rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);
-            movementState = MovementState.airborne;
         }
         private void ResetJump()
         {
             canJump = true;
+            exitingSlope = false;
         }
 
         private void HandleMouseInput()
@@ -105,56 +120,8 @@ namespace Korx.Player
         {
             verticalInput = Input.GetAxisRaw("Vertical");
             horizontalInput = Input.GetAxisRaw("Horizontal");
-        }
 
-        private void ApplyFinalMovements()
-        {
-            moveDirection = (orientation.forward * verticalInput + orientation.right * horizontalInput);
-
-            // Get the current horizontal velocity (only x and z components)
-            Vector3 flatVelocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
-
-            // Preserve current speed magnitude but apply it in the new direction
-            float currentSpeed = flatVelocity.magnitude;
-
-            // Ensure the player builds up to their target speed
-            if (isGrounded)
-            {
-                if (currentSpeed < moveSpeed)
-                {
-                    rb.AddForce(moveDirection * moveSpeed, ForceMode.Acceleration); // Gradually build up speed
-                }
-            }
-            else
-            {
-                if (currentSpeed < moveSpeed * airMultiplier)
-                {
-                    rb.AddForce(moveDirection * moveSpeed * airMultiplier, ForceMode.Acceleration); // Build up speed in air
-                }
-            }
-
-            // Apply direction change instantly without affecting current speed
-            if (flatVelocity.magnitude > 0.1f) // If there is significant velocity, preserve it
-            {
-                rb.velocity = moveDirection * flatVelocity.magnitude + new Vector3(0f, rb.velocity.y, 0f);
-            }
-        }
-
-
-        private void Update()
-        {
-            isGrounded = IsGrounded();
-            if (!isGrounded && movementState != MovementState.airborne)
-            {
-                movementState = MovementState.airborne;
-                ChangeState();
-            }
-            else
-            {
-                movementState = MovementState.walking;
-            }
-
-            if (Input.GetKey(KeyCode.Space) && canJump && isGrounded)
+            if (Input.GetKey(KeyCode.Space) && canJump && allowJump && isGrounded)
             {
                 canJump = false;
 
@@ -162,28 +129,51 @@ namespace Korx.Player
                 Invoke(nameof(ResetJump), jumpCooldown);
             }
 
-            HandleMouseInput();
-            HandleMovementInput();
-            SpeedControl();
-        }
-
-        private void FixedUpdate()
-        {
-            ApplyFinalMovements();
-        }
-
-        //Helpers
-        private void SpeedControl()
-        {
-            Vector3 flatVel = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
-            if(flatVel.magnitude > moveSpeed)
+            if (Input.GetKey(KeyCode.LeftShift) && allowSprint && isGrounded && movementState != MovementState.crouching)
             {
-                Vector3 limitedVel = flatVel.normalized * moveSpeed;
-                rb.velocity = new Vector3(limitedVel.x, rb.velocity.y, limitedVel.z);
+                movementState = MovementState.sprinting;
+            }
+
+            if (Input.GetKeyDown(KeyCode.LeftControl) && allowCrouch && isGrounded)
+            {
+                transform.localScale = new Vector3(transform.localScale.x, crouchYScale, transform.localScale.z);
+                rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
+                movementState = MovementState.crouching;
+            }
+            else if (Input.GetKeyUp(KeyCode.LeftControl))
+            {
+                transform.localScale = new Vector3(transform.localScale.x, startYScale, transform.localScale.z);
+                movementState = MovementState.walking;
             }
         }
 
-        private void ChangeState()
+        private void ApplyFinalMovements()
+        {
+            moveDirection = (orientation.forward * verticalInput + orientation.right * horizontalInput);
+
+            if (OnSlope() && !exitingSlope)
+            {
+                rb.AddForce(GetSlopeMoveDirection() * moveSpeed, ForceMode.Force);
+
+                if (rb.velocity.y > 0f)
+                {
+                    rb.AddForce(Vector3.down * 5f, ForceMode.Force);
+                }
+            }
+            else if (isGrounded)
+            {
+                rb.AddForce(moveDirection * moveSpeed, ForceMode.Force);
+            }
+            else if (!isGrounded)
+            {
+                rb.AddForce(moveDirection * moveSpeed * airMultiplier, ForceMode.Force);
+            }
+
+            rb.useGravity = !OnSlope();
+        }
+
+
+        private void Update()
         {
             switch (movementState)
             {
@@ -193,9 +183,11 @@ namespace Korx.Player
                     break;
                 case MovementState.crouching:
                     moveSpeed = crouchSpeed;
+                    rb.drag = groundDrag;
                     break;
                 case MovementState.sprinting:
                     moveSpeed = sprintSpeed;
+                    rb.drag = groundDrag;
                     break;
                 case MovementState.airborne:
                     moveSpeed = sprintSpeed;
@@ -214,11 +206,66 @@ namespace Korx.Player
                     moveSpeed = walkSpeed;
                     break;
             }
+
+            isGrounded = IsGrounded();
+            if (!isGrounded && movementState != MovementState.airborne)
+            {
+                movementState = MovementState.airborne;
+            }
+            else if (rb.velocity.magnitude > 0f && movementState != MovementState.crouching && movementState != MovementState.sprinting)
+            {
+                movementState = MovementState.walking;
+            }
+            HandleMouseInput();
+            HandleMovementInput();
+            SpeedControl();
         }
+
+        private void FixedUpdate()
+        {
+            ApplyFinalMovements();
+        }
+
+        //Helpers
+        private void SpeedControl()
+        {
+            if (OnSlope() && !exitingSlope)
+            {
+                if (rb.velocity.magnitude > moveSpeed)
+                    rb.velocity = rb.velocity.normalized * moveSpeed;
+            }
+            else
+            {
+                Vector3 flatVel = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+                if (flatVel.magnitude > moveSpeed)
+                {
+                    Vector3 limitedVel = flatVel.normalized * moveSpeed;
+                    rb.velocity = new Vector3(limitedVel.x, rb.velocity.y, limitedVel.z);
+                }
+            }
+        }
+
         private bool IsGrounded()
         {
             return Physics.Raycast(transform.position, Vector3.down, capsuleCollider.height / 2f + 0.2f, groundMask);
         }
+
+        private bool OnSlope()
+        {
+            if(Physics.Raycast(transform.position, Vector3.down, out slopeHit, capsuleCollider.height / 2f + 0.3f, groundMask))
+            {
+                float angle = Vector3.Angle(Vector3.up, slopeHit.normal);
+                return angle < maxSlopeAngle && angle != 0;
+            }
+
+            return false;
+        }
+
+        private Vector3 GetSlopeMoveDirection()
+        {
+            return Vector3.ProjectOnPlane(moveDirection, slopeHit.normal).normalized;
+        }
+
         public MovementState CurrentMovementState { get { return movementState; } }
     }
 }
