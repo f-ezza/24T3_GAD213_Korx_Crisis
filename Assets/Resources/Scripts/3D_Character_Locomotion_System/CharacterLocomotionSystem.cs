@@ -34,11 +34,11 @@ namespace Korx.Player
         [SerializeField] private float jumpCooldown = 0.5f;
 
         [Header("Look Variables")]
-        [SerializeField] private float xSens = 1f;
-        [SerializeField] private float ySens = 1f;
-        [SerializeField] private float mouseX = 0f;
-        [SerializeField] private float mouseY = 0f;
-        [SerializeField] private float lookLimit = 75f;
+        [SerializeField] private float sensX = 1f;
+        [SerializeField] private float sensY = 1f;
+        [SerializeField] private float lookLimit = 90f;
+        private float xRotation;
+        private float yRotation;
 
         [Header("External Components")]
         [SerializeField] private Rigidbody rb;
@@ -54,7 +54,11 @@ namespace Korx.Player
 
         //Internal Variables
         private float moveSpeed;
-        private Vector2 moveDirection;
+        private Vector3 moveDirection;
+
+        //Internal Movement Variables
+        float verticalInput;
+        float horizontalInput;
 
         //Internal Checks
         private bool canJump;
@@ -67,6 +71,12 @@ namespace Korx.Player
         private bool isGrounded;
 
         // Methods
+        private void Awake()
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+            canJump = true;
+        }
         private void HandleJump()
         {
             rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);
@@ -79,38 +89,100 @@ namespace Korx.Player
 
         private void HandleMouseInput()
         {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            float mouseX = Input.GetAxisRaw("Mouse X") * Time.deltaTime * sensX;
+            float mouseY = Input.GetAxisRaw("Mouse Y") * Time.deltaTime * sensY;
 
+            yRotation += mouseX;
 
-            mouseX += Input.GetAxis("Mouse X") * xSens;
-            mouseY -= Input.GetAxis("Mouse Y") * ySens;
-            mouseY = Mathf.Clamp(mouseY, -lookLimit, lookLimit);
+            xRotation -= mouseY;
+            xRotation = Mathf.Clamp(xRotation, -lookLimit, lookLimit);
 
-            playerCamera.transform.localRotation = Quaternion.Euler(mouseY, mouseX, 0f);
-            orientation.rotation = Quaternion.Euler(0f, mouseX, 0f);
+            playerCamera.transform.localRotation = Quaternion.Euler(xRotation, yRotation, 0f);
+            orientation.rotation = Quaternion.Euler(0f, yRotation, 0f);
         }
 
         private void HandleMovementInput()
         {
-            float horizontalInput = Input.GetAxis("Horizontal");
-            float verticalInput = Input.GetAxis("Vertical");
-
-            moveDirection = new Vector2(horizontalInput, verticalInput).normalized;
+            verticalInput = Input.GetAxisRaw("Vertical");
+            horizontalInput = Input.GetAxisRaw("Horizontal");
         }
 
         private void ApplyFinalMovements()
         {
+            moveDirection = (orientation.forward * verticalInput + orientation.right * horizontalInput);
 
+            // Get the current horizontal velocity (only x and z components)
+            Vector3 flatVelocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+
+            // Preserve current speed magnitude but apply it in the new direction
+            float currentSpeed = flatVelocity.magnitude;
+
+            // Ensure the player builds up to their target speed
+            if (isGrounded)
+            {
+                if (currentSpeed < moveSpeed)
+                {
+                    rb.AddForce(moveDirection * moveSpeed, ForceMode.Acceleration); // Gradually build up speed
+                }
+            }
+            else
+            {
+                if (currentSpeed < moveSpeed * airMultiplier)
+                {
+                    rb.AddForce(moveDirection * moveSpeed * airMultiplier, ForceMode.Acceleration); // Build up speed in air
+                }
+            }
+
+            // Apply direction change instantly without affecting current speed
+            if (flatVelocity.magnitude > 0.1f) // If there is significant velocity, preserve it
+            {
+                rb.velocity = moveDirection * flatVelocity.magnitude + new Vector3(0f, rb.velocity.y, 0f);
+            }
         }
 
 
         private void Update()
         {
+            isGrounded = IsGrounded();
+            if (!isGrounded && movementState != MovementState.airborne)
+            {
+                movementState = MovementState.airborne;
+                ChangeState();
+            }
+            else
+            {
+                movementState = MovementState.walking;
+            }
 
+            if (Input.GetKey(KeyCode.Space) && canJump && isGrounded)
+            {
+                canJump = false;
+
+                HandleJump();
+                Invoke(nameof(ResetJump), jumpCooldown);
+            }
+
+            HandleMouseInput();
+            HandleMovementInput();
+            SpeedControl();
+        }
+
+        private void FixedUpdate()
+        {
+            ApplyFinalMovements();
         }
 
         //Helpers
+        private void SpeedControl()
+        {
+            Vector3 flatVel = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+            if(flatVel.magnitude > moveSpeed)
+            {
+                Vector3 limitedVel = flatVel.normalized * moveSpeed;
+                rb.velocity = new Vector3(limitedVel.x, rb.velocity.y, limitedVel.z);
+            }
+        }
+
         private void ChangeState()
         {
             switch (movementState)
@@ -146,7 +218,6 @@ namespace Korx.Player
         private bool IsGrounded()
         {
             return Physics.Raycast(transform.position, Vector3.down, capsuleCollider.height / 2f + 0.2f, groundMask);
-
         }
         public MovementState CurrentMovementState { get { return movementState; } }
     }

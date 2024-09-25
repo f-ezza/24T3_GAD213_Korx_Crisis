@@ -419,15 +419,13 @@ MonoBehaviour:
   sprintSpeed: 10
   diveForce: 8
   slideForce: 8
-  jumpForce: 8
+  jumpForce: 4
   groundDrag: 1
   airDrag: 0
   airMultiplier: 0.4
   jumpCooldown: 0.5
-  xSens: 5
-  ySens: 5
-  mouseX: 0
-  mouseY: 0
+  sensX: 500
+  sensY: 500
   lookLimit: 75
   rb: {fileID: 827397762}
   capsuleCollider: {fileID: 827397761}
