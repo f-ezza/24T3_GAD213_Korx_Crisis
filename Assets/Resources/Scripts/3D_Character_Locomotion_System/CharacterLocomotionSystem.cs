@@ -34,8 +34,28 @@ namespace Korx.Player
         [SerializeField] private float crouchYScale;
         [SerializeField] private float startYScale;
 
+        [Header("Sliding")]
+        [SerializeField] private float maxDiveTime;
+        [SerializeField] private float diveYScale;
+        private float diveTimer;
+
+        [Header("Sliding")]
+        [SerializeField] private float maxSlideTime;
+        [SerializeField] private float slideYScale;
+        private float slideTimer;
+
         [Header("Jump Cooldown")]
         [SerializeField] private float jumpCooldown = 0.5f;
+
+        [Header("Mantling System")]
+        [SerializeField] private float mantleMaxHeight = 1.5f;
+        [SerializeField] private float mantleReachDistance = 1f;
+        [SerializeField] private float mantleSpeed = 5f;
+        [SerializeField] private LayerMask mantleableLayers;
+
+        private bool isMantling = false;
+        private Vector3 mantleStartPos;
+        private Vector3 mantleEndPos;
 
         [Header("Look Variables")]
         [SerializeField] private float sensX = 1f;
@@ -123,10 +143,12 @@ namespace Korx.Player
 
             if (Input.GetKey(KeyCode.Space) && canJump && allowJump && isGrounded)
             {
-                canJump = false;
-
-                HandleJump();
-                Invoke(nameof(ResetJump), jumpCooldown);
+                if (!TryMantle())  // TryMantle() returns true if mantling is successful
+                {
+                    canJump = false;
+                    HandleJump(); // If mantling fails, do normal jump
+                    Invoke(nameof(ResetJump), jumpCooldown);
+                }
             }
 
             if (Input.GetKey(KeyCode.LeftShift) && allowSprint && isGrounded && movementState != MovementState.crouching)
@@ -144,6 +166,17 @@ namespace Korx.Player
             {
                 transform.localScale = new Vector3(transform.localScale.x, startYScale, transform.localScale.z);
                 movementState = MovementState.walking;
+            }
+
+            if (Input.GetKeyDown(KeyCode.C) && allowSlide && isGrounded && movementState == MovementState.sprinting)
+            {
+                rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
+                StartCoroutine(Slide());
+            }
+            if (Input.GetKeyDown(KeyCode.LeftAlt) && allowSlide && isGrounded && movementState == MovementState.sprinting)
+            {
+                rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
+                StartCoroutine(Slide());
             }
         }
 
@@ -227,6 +260,26 @@ namespace Korx.Player
         }
 
         //Helpers
+        private bool TryMantle()
+        {
+            Vector3 rayStart = orientation.transform.position;
+            Vector3 rayDirection = playerCamera.transform.forward;
+
+            Debug.DrawRay(rayStart, rayDirection * mantleReachDistance, Color.red, 1f);
+
+            if (Physics.Raycast(rayStart, rayDirection, out RaycastHit hit, mantleReachDistance, mantleableLayers))
+            {
+                float obstacleHeight = hit.point.y - transform.position.y;
+
+                if (obstacleHeight > 0 && obstacleHeight <= mantleMaxHeight)
+                {
+                    StartCoroutine(Mantle(hit));
+                    return true;
+                }
+            }
+
+            return false;
+        }
         private void SpeedControl()
         {
             if (OnSlope() && !exitingSlope)
@@ -259,6 +312,68 @@ namespace Korx.Player
             }
 
             return false;
+        }
+
+        private IEnumerator Slide()
+        {
+            movementState = MovementState.sliding;
+            slideTimer = maxSlideTime;
+
+            transform.localScale = new Vector3(transform.localScale.x, slideYScale, transform.localScale.z);
+            rb.AddForce(orientation.forward * slideForce, ForceMode.Impulse);
+
+            while (slideTimer > 0)
+            {
+                slideTimer -= Time.deltaTime;
+                yield return null;
+            }
+
+            transform.localScale = new Vector3(transform.localScale.x, startYScale, transform.localScale.z);
+            movementState = MovementState.walking;
+        }
+
+        private IEnumerator Dive()
+        {
+            movementState = MovementState.diving;
+            diveTimer = maxDiveTime;
+
+            transform.localScale = new Vector3(transform.localScale.x, diveYScale, transform.localScale.z);
+            rb.AddForce(orientation.forward * diveForce, ForceMode.Impulse);
+
+            while (diveTimer > 0)
+            {
+                diveTimer -= Time.deltaTime;
+                yield return null;
+            }
+
+            transform.localScale = new Vector3(transform.localScale.x, startYScale, transform.localScale.z);
+            movementState = MovementState.walking;
+        }
+
+        private IEnumerator Mantle(RaycastHit hit)
+        {
+            isMantling = true;
+            movementState = MovementState.mantling;
+            rb.isKinematic = true;
+
+            mantleStartPos = transform.position;
+            mantleEndPos = new Vector3(hit.point.x, hit.point.y + 1f, hit.point.z);
+
+            float elapsedTime = 0f;
+            float mantleDuration = Vector3.Distance(mantleStartPos, mantleEndPos) / mantleSpeed;
+
+            while (elapsedTime < mantleDuration)
+            {
+                transform.position = Vector3.Lerp(mantleStartPos, mantleEndPos, elapsedTime / mantleDuration);
+                elapsedTime += Time.deltaTime;
+                yield return null;
+            }
+
+            transform.position = mantleEndPos;
+
+            rb.isKinematic = false;
+            isMantling = false;
+            movementState = MovementState.walking;
         }
 
         private Vector3 GetSlopeMoveDirection()
