@@ -143,10 +143,10 @@ namespace Korx.Player
 
             if (Input.GetKey(KeyCode.Space) && canJump && allowJump && isGrounded)
             {
-                if (!TryMantle())  // TryMantle() returns true if mantling is successful
+                if (!TryMantle())
                 {
                     canJump = false;
-                    HandleJump(); // If mantling fails, do normal jump
+                    HandleJump();
                     Invoke(nameof(ResetJump), jumpCooldown);
                 }
             }
@@ -158,25 +158,16 @@ namespace Korx.Player
 
             if (Input.GetKeyDown(KeyCode.LeftControl) && allowCrouch && isGrounded)
             {
-                transform.localScale = new Vector3(transform.localScale.x, crouchYScale, transform.localScale.z);
-                rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
-                movementState = MovementState.crouching;
+                Crouch();
             }
             else if (Input.GetKeyUp(KeyCode.LeftControl))
             {
-                transform.localScale = new Vector3(transform.localScale.x, startYScale, transform.localScale.z);
-                movementState = MovementState.walking;
+                StandUp();
             }
 
-            if (Input.GetKeyDown(KeyCode.C) && allowSlide && isGrounded && movementState == MovementState.sprinting)
+            if ((Input.GetKeyDown(KeyCode.C) || Input.GetKeyDown(KeyCode.LeftAlt)) && allowSlide && isGrounded && movementState == MovementState.sprinting)
             {
-                rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
-                StartCoroutine(Slide());
-            }
-            if (Input.GetKeyDown(KeyCode.LeftAlt) && allowSlide && isGrounded && movementState == MovementState.sprinting)
-            {
-                rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
-                StartCoroutine(Slide());
+                StartSlide();
             }
         }
 
@@ -348,6 +339,25 @@ namespace Korx.Player
 
             transform.localScale = new Vector3(transform.localScale.x, startYScale, transform.localScale.z);
             movementState = MovementState.walking;
+        }
+
+        void Crouch()
+        {
+            transform.localScale = new Vector3(transform.localScale.x, crouchYScale, transform.localScale.z);
+            rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
+            movementState = MovementState.crouching;
+        }
+
+        void StandUp()
+        {
+            transform.localScale = new Vector3(transform.localScale.x, startYScale, transform.localScale.z);
+            movementState = MovementState.walking;
+        }
+
+        void StartSlide()
+        {
+            rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
+            StartCoroutine(Slide());
         }
 
         private IEnumerator Mantle(RaycastHit hit)
