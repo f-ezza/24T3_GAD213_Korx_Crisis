@@ -75,6 +75,7 @@ namespace Korx.Player
         [SerializeField] private Camera playerCamera;
         [SerializeField] private Transform orientation;
         [SerializeField] private LayerMask groundMask;
+        [SerializeField] private Animator playerAnimator;
 
         // Movement State
         public enum MovementState { walking, crouching, sprinting, airborne, diving, sliding, mantling }
@@ -84,10 +85,13 @@ namespace Korx.Player
         //Internal Variables
         private float moveSpeed;
         private Vector3 moveDirection;
+        private float currentMovementValue = 0f;
+        private Vector3 lastVelocity = Vector3.zero;
 
         //Internal Movement Variables
         float verticalInput;
         float horizontalInput;
+
 
         //Internal Checks
         private bool canJump;
@@ -108,6 +112,7 @@ namespace Korx.Player
             Cursor.visible = false;
             canJump = true;
             startYScale = transform.localScale.y;
+            playerAnimator = GameObject.Find("SK_FP_CH_Default_Root").GetComponent<Animator>();
         }
 
         private void HandleJump()
@@ -155,6 +160,10 @@ namespace Korx.Player
             {
                 movementState = MovementState.sprinting;
             }
+            else if (Input.GetKeyUp(KeyCode.LeftShift))
+            {
+                movementState = MovementState.walking;
+            }
 
             if (Input.GetKeyDown(KeyCode.LeftControl) && allowCrouch && isGrounded)
             {
@@ -194,6 +203,12 @@ namespace Korx.Player
             }
 
             rb.useGravity = !OnSlope();
+
+            float targetMovementValue = rb.velocity.magnitude;
+
+            currentMovementValue = Mathf.Lerp(currentMovementValue, targetMovementValue, Time.deltaTime * 5f);
+
+            playerAnimator.SetFloat("Movement", currentMovementValue);
         }
 
 
@@ -204,30 +219,45 @@ namespace Korx.Player
                 case MovementState.walking:
                     moveSpeed = walkSpeed;
                     rb.drag = groundDrag;
+                    playerAnimator.SetBool("Running", false);
                     break;
                 case MovementState.crouching:
                     moveSpeed = crouchSpeed;
                     rb.drag = groundDrag;
+                    playerAnimator.SetBool("Running", false);
                     break;
                 case MovementState.sprinting:
                     moveSpeed = sprintSpeed;
                     rb.drag = groundDrag;
+                    if (rb.velocity.magnitude > 0)
+                    {
+                        playerAnimator.SetBool("Running", true);
+                    }
+                    else
+                    {
+                        playerAnimator.SetBool("Running", false);
+                    }
                     break;
                 case MovementState.airborne:
                     moveSpeed = sprintSpeed;
                     rb.drag = airDrag;
+                    playerAnimator.SetBool("Running", false);
                     break;
                 case MovementState.diving:
                     moveSpeed = sprintSpeed;
+                    playerAnimator.SetBool("Running", false);
                     break;
                 case MovementState.sliding:
                     moveSpeed = sprintSpeed;
+                    playerAnimator.SetBool("Running", false);
                     break;
                 case MovementState.mantling:
                     moveSpeed = 0f;
+                    playerAnimator.SetBool("Running", false);
                     break;
                 default:
                     moveSpeed = walkSpeed;
+                    playerAnimator.SetBool("Running", false);
                     break;
             }
 
@@ -248,6 +278,17 @@ namespace Korx.Player
         private void FixedUpdate()
         {
             ApplyFinalMovements();
+        }
+
+        void LateUpdate()
+        {
+            // Ensure arms stay aligned with the camera
+            Transform arms = playerCamera.transform.Find("Arms");
+            if (arms != null)
+            {
+                arms.position = playerCamera.transform.position;
+                arms.rotation = playerCamera.transform.rotation;
+            }
         }
 
         //Helpers

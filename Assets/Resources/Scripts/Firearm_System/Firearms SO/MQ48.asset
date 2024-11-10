@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f2f1ef5f0d20b24491328b7cb83010e, type: 3}
+  m_Name: MQ48
+  m_EditorClassIdentifier: 
+  firearmName: MQ48
+  firearmIDName: mq48
+  firearmDescription: The Marlo Quick 48 (MQ48) is a bleeding edge modern Assualt
+    Rifle, equipped with a 30 round 5.56x45mm magazine, it unleashes a quick succession
+    of rounds to quickly dispatch any and all threats. Find the range, adapt the
+    fire mode, and make your problems disappear
+  firearmType: Assualt Rifle
+  firearmFullMag: 30
+  firearmfirerate: 875
+  firearmDamage: 20
+  firearmHSMultiplier: 1.25
+  firearmReloadTime: 0.75
+  firearmWeight: 3
+  firearmAimSpeed: 0.25
+  firearmRange: 500
+  firearmBurstCount: 3
+  firearmFireModes: 000000000100000002000000
+  firearmShootSound:
+  - {fileID: 8300000, guid: 9e9480b4d07646942b555fd43f2a0f71, type: 3}
+  - {fileID: 8300000, guid: 0addcc409a57b4a43b86a3d2310ac5b4, type: 3}
+  firearmShootEmptySound: {fileID: 8300000, guid: 0c187ee2790c74c4e9985aa1ee1a12d5,
+    type: 3}
+  firearmReloadSound: {fileID: 8300000, guid: 778c7be53403f9e45804f5a61a13a3e6, type: 3}
+  firearmReloadEmptySound: {fileID: 8300000, guid: 1fe5c2e1733f354428fe88c1a7cbafe4,
+    type: 3}
+  firearmAimSound: {fileID: 8300000, guid: afe80d867ef6b8c4fa45b07f1f99533c, type: 3}
+  firearmEjectSounds:
+  - {fileID: 8300000, guid: 82fd1b9495a6b2045bbeabe4b7c168da, type: 3}
+  - {fileID: 8300000, guid: 9900c91b18eff614bb5654ec3471c41a, type: 3}
+  - {fileID: 8300000, guid: 978c88d300d39be41bc7eba2331d1c4c, type: 3}
+  - {fileID: 8300000, guid: 1715c914ea52a9f4ebac3ad860573e80, type: 3}
+  - {fileID: 8300000, guid: b8431057c404b004db076407851e3ede, type: 3}
+  firearmFireSelectSounds:
+  - {fileID: 8300000, guid: d4bb93cc1fea6eb43b9ebb8411c2618e, type: 3}
+  - {fileID: 8300000, guid: 0e130fc658b2d6e4e986a3ceccb26bc5, type: 3}
+  - {fileID: 8300000, guid: b381cdde1bb28f947bf6c25ed7d7828b, type: 3}
+  - {fileID: 8300000, guid: 0a368d25cbbffeb49a27ed346711cf52, type: 3}
+  - {fileID: 8300000, guid: 6b2db1b26cc92154181b53bed64bff50, type: 3}
+  firearmPrefab: {fileID: 8445401694592989334, guid: 8c7ba79f8ec05794aba7ffdd3d8aba93,
+    type: 3}
+  firearmCasingPrefab: {fileID: 1492315059354262, guid: c638dfae3f3edf843b2614dae230a771,
+    type: 3}
+  firearmSprite: {fileID: 0}

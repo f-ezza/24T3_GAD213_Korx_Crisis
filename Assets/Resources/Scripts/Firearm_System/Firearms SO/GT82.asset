@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f2f1ef5f0d20b24491328b7cb83010e, type: 3}
+  m_Name: GT82
+  m_EditorClassIdentifier: 
+  firearmName: GT82
+  firearmIDName: gt82
+  firearmDescription: The GT82 was developed to be a compliment to the MQ48, with
+    the stopping power of 9mm and the lightweight chassis, it enables operators a
+    quick solution whent htings get sticky
+  firearmType: Handgun
+  firearmFullMag: 8
+  firearmfirerate: 600
+  firearmDamage: 15
+  firearmHSMultiplier: 1.5
+  firearmReloadTime: 0.75
+  firearmWeight: 1
+  firearmAimSpeed: 0.125
+  firearmBurstCount: 0
+  firearmFireModes: 00000000
+  firearmPrefab: {fileID: 189091626145577203, guid: 464d2b315a1ed6b408948cc2fc04e8f7,
+    type: 3}
+  firearmSprite: {fileID: 0}
