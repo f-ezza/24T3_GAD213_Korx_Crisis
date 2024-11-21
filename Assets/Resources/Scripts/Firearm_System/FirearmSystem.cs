@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Korx.Firearms
@@ -40,11 +41,15 @@ namespace Korx.Firearms
         [SerializeField] private AudioSource audioSource;
 
         [SerializeField]private Transform casingEjectionPoint;
+
+        [Header("External Components")]
+        [SerializeField] private UIManager uiManager;
         #endregion
 
         #region Initialization & Update
         private void Awake()
         {
+            uiManager = FindAnyObjectByType<UIManager>();
             firearms = Resources.LoadAll<FirearmDefinition>("Scripts/Firearm_System/Firearms SO");
             playerAnimator = GameObject.Find("SK_FP_CH_Default_Root").GetComponent<Animator>();
             audioSource = GetComponent<AudioSource>();
@@ -53,6 +58,7 @@ namespace Korx.Firearms
         private void Start()
         {
             SetWeapon(firearms[1]);
+            HandleUI();
         }
 
         private void Update()
@@ -178,6 +184,7 @@ namespace Korx.Firearms
             currentAmmo = currentFirearm.firearmFullMag;
             canFire = true;
             currentFirearmAnimator.SetBool("Reloading", false);
+            HandleUI();
         }
         #endregion
 
@@ -191,6 +198,7 @@ namespace Korx.Firearms
 
                 Debug.Log("Fire mode changed to: " + curFireMode);
                 audioSource.PlayOneShot(currentFirearm.firearmFireSelectSounds[Random.Range(0, currentFirearm.firearmFireSelectSounds.Length - 1)]);
+                HandleUI();
             }
         }
         #endregion
@@ -263,6 +271,7 @@ namespace Korx.Firearms
 
             currentAmmo--;
 
+            HandleUI();
             Debug.Log("Bang!");
         }
 
@@ -332,6 +341,13 @@ namespace Korx.Firearms
                     return result;
             }
             return null;
+        }
+        #endregion
+
+        #region Outside Methods
+        private void HandleUI()
+        {
+            uiManager.HandleFirearmUI(currentFirearm.name, curFireMode.ToString(), currentAmmo.ToString() + "/" + currentFirearm.firearmFullMag.ToString(), currentFirearm.firearmSprite);
         }
         #endregion
     }

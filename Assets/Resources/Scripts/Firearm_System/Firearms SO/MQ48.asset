@@ -23,7 +23,7 @@ MonoBehaviour:
   firearmfirerate: 875
   firearmDamage: 20
   firearmHSMultiplier: 1.25
-  firearmReloadTime: 0.75
+  firearmReloadTime: 2.2
   firearmWeight: 3
   firearmAimSpeed: 0.25
   firearmRange: 500
